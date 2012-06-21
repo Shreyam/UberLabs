@@ -8,12 +8,12 @@
 using namespace std;
 using namespace cv;
 
-vector<Point2f> in1;
-vector<Point2f> in2;
-vector<pair<Point2f,Point2f> > pair1;
-vector<pair<float,int> > ang1;
-vector<pair<float,int> > ang2;
-pair<Point2f,Point2f> cent(Point(0,0),Point(0,0));
+vector<Point2f> in1;//vector comprising point co-ordinates from the first convex hull
+vector<Point2f> in2;//vector comprising point co-ordinates from the second convex hull
+vector<pair<Point2f,Point2f> > pair1;//vector pair containing pairs of point matches from the hulls
+vector<pair<float,int> > ang1;//The angle information of points on the first convex hull stored in this vector
+vector<pair<float,int> > ang2;//The angle information of points on the second convex hull stored in this vector
+pair<Point2f,Point2f> cent(Point(0,0),Point(0,0));//Pair which contains the center of the two convex hulls
 
 //ReadVect reads the pair of Convex Hull Points if no file name is entered as an argument
 vector<pair<Point2f,Point2f> > ReadVect()
@@ -93,6 +93,8 @@ for(it=In.begin();it!=In.end();it++)
     //cout<<"An2::"<<ang<<endl;
     }
 }
+
+//Function to Display a vector of pairs<float,int>
 void DisplaySort(vector<pair<float,int> > a)
 {
 vector<pair<float,int> >::iterator it;
@@ -103,6 +105,7 @@ for(it=a.begin();it!=a.end();++it)
         }
 }
 
+//Function to sort the points on the basis of their angle with the x-axis
 void SortAngle(vector<pair<float,int> > *x1,vector<pair<float,int> > *x2)
 {
 vector<pair<float,int> > a1=*x1;
@@ -114,6 +117,7 @@ sort(a2.begin(),a2.end());
 *x1=a1;*x2=a2;
 }
 
+//Function to extract the sequence of the points from the vector<pair<float,int> > and push the result in a vector of strings
 void ExtrSeq(vector<pair<float,int> > in,vector<string> *res)
 {
 
@@ -131,11 +135,13 @@ void ExtrSeq(vector<pair<float,int> > in,vector<string> *res)
     //cout<<res<<endl;
 }
 
+//Utility function to get the maximum of two ints
 int max(int a, int b)
 {
     return (a > b)? a : b;
 }
 
+//Function to find the longest common sequence to get the no. of points in the same rotational order
 int RotOrder(vector<string> X,vector<string> Y )
 {
     int m=X.size(),n=Y.size(),i,j;
@@ -155,7 +161,48 @@ int RotOrder(vector<string> X,vector<string> Y )
         }
     return L[m-1][n-1];
 }
-// RotOrder()
+
+float StdDev(vector<pair<float,int> > an1,vector<pair<float,int> > an2)
+{
+    float a,a2=0,ans=0;
+    vector<pair<float,int> >::iterator it1,it2;
+    it1=an1.begin();
+    int cnt=0;
+    pair<float,int> init1=*it1;
+    for(it1=an1.begin();it1!=an1.end();it1++)
+        {
+        //cout<<bool(it1==an1.end()-1)<<endl;
+        pair<float,int> t1=*it1,t2=(it1==an1.end()-1)?init1:*(it1+1),s1;
+        a=t1.first-t2.first;
+        //cout<<"Angle::"<<a<<" Points::"<<t1.second<<","<<t2.second<<endl;
+        cnt=0;a2=0;
+        for(it2=an2.begin();it2!=an2.end();it2++)
+            {
+            s1=*it2;
+
+            if(cnt==2)
+                break;
+            if(s1.second==t1.second)
+                {
+                a2+=s1.first;
+                cnt++;
+                }
+            else if(s1.second==t2.second)
+                {
+                a2-=s1.first;
+                cnt++;
+                }
+            //cout<<"Loop:"<<s1.first<<" "<<s1.second<<":"<<a2<<endl;
+            }
+        //cout<<"Angle2::"<<a2<<" diff::"<<a-a2<<endl;
+        ans+=pow(min(((a-a2)<0?-(a-a2):(a-a2)),360-((a-a2)<0?-(a-a2):(a-a2))),2);
+        //cout<<"Dev::"<<ans<<endl;
+        }
+        ans=sqrt(ans)/an1.size();
+    //cout<<ans<<endl;
+    return ans;
+}
+//Main
 int main(int argc, char *argv[])
 {
     float pars[4];
@@ -163,11 +210,13 @@ int main(int argc, char *argv[])
     int cn,i=0;
     if(argc!=2)
         {
+        //If no arguments the data is read from the user using ReadVect() function
         pair1=ReadVect();
         DisplayVect(pair1);
         }
     else
         {
+        //Reading data from a file in the format float,float:float,float (for ex. 45.66,23.12:12.33,56.75)
         ifstream f(argv[1]);//Command line input for file name
         if(f.is_open())
             while(f.good())
@@ -223,5 +272,7 @@ int main(int argc, char *argv[])
     int InRot=RotOrder(s1,s2);
     cout<<"No of points not in rotational order :: "<<len-InRot<<endl;
 
+    float ans=StdDev(ang1,ang2);
+    cout<<"Standard Deviation::"<<ans<<endl;
     return 0;
 }
